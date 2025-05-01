@@ -36,15 +36,21 @@ const Cube = ({ video, canvas }) => {
         // mesh.current.material.uniforms.u_resolution.value = new THREE.Vector2([window.innerWidth, window.innerHeight]);
         // mesh.current.material.uniforms.u_texture.value.needsUpdate=true;
         // texture.needsUpdate=true;
-        
+        // console.log(video?.videoWidth, video?.videoHeight);
+
+        const ratio=video?.videoWidth/video?.videoHeight;
+        if(!isNaN(ratio)) mesh.current.scale.set(1, ratio, 1);
+
     });
 
     useEffect(()=>{
 
+    
+
         // set size to window
 
         // function onResize(){
-        //     // mesh.current.scale.set(window.innerWidth, window.innerHeight, 1);
+            // mesh.current.scale.set(window.innerWidth, window.innerHeight, 1);
         //     mesh.current.scale.set(10,10);
         // }
         // window.addEventListener('resize', onResize);
