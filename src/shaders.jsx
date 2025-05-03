@@ -106,7 +106,7 @@ void main() {
   
     vec2 uv = vUv;
     vec2 pixelUV = floor(uv * u_resolution / (pixelSize)) * (pixelSize) / u_resolution;
-    vec2 offset=vec2(0.0);//vec2(0.0, smoothstep(0.95, 1.0,noise(pixelUV.x*2.2 + pixelUV.y * 120.2 + sin(u_time*20.5)*200.0)))*20.0*pixelSize/u_resolution;
+    vec2 offset=vec2(0.0, smoothstep(0.95, 1.0,noise(pixelUV.x*2.2 + pixelUV.y * 120.2 + sin(u_time*20.5)*200.0)))*20.0*pixelSize/u_resolution;
 
     pixelUV += offset;
     

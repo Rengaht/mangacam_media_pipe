@@ -143,14 +143,15 @@ function App() {
       const canvas = refCanvas.current;
       const ctx=canvas.getContext("2d");
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
+      
+
       
       // try{
         if(video.readyState >= 2){
           const detections = await refPoseLandmarker.current?.detectForVideo(video, video.currentTime*1000);
           
           // no people detected
-          if(detections.landmarks.length === 0){
+          if(detections?.landmarks.length === 0){
             drawCharacter();
             // toggleText(true);
             setDetected(false);
@@ -444,9 +445,9 @@ function App() {
 
   return (
     <>
-      <video ref={refVideo} id="_capture"></video>
-      <canvas id="_canvas" ref={refCanvas}></canvas>
-      <canvas id="_mask" ref={refMask}></canvas>
+      <video ref={refVideo} id="_capture" className='hidden'></video>
+      <canvas id="_canvas" ref={refCanvas} className='hidden'></canvas>
+      <canvas id="_mask" ref={refMask} className='hidden'></canvas>
       <label className='absolute top-0 left-0 z-10 text-red-500'>{fps}</label>   
       {/* <div className='fixed top-0 left-0 w-full h-1/2'> */}
       <Scene video={refVideo.current} canvas={refCanvas.current} mask={refMask.current}/>

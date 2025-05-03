@@ -43,13 +43,13 @@ const Cube = ({ video, canvas, mask }) => {
         if(mesh.current.material.uniforms.u_canvas.value!=null){
             mesh.current.material.uniforms.u_canvas.value.needsUpdate=true;
         }
-        if(mask!=null && mesh.current.material.uniforms.u_mask.value==null){
-            const texture= new THREE.CanvasTexture(mask);
-            // texture.onload=()=>{
-            //     texture.needsUpdate=true;
-            // }
-            mesh.current.material.uniforms.u_mask.value=texture;
-        }
+        // if(mask!=null && mesh.current.material.uniforms.u_mask.value==null){
+        //     const texture= new THREE.CanvasTexture(mask);
+        //     // texture.onload=()=>{
+        //     //     texture.needsUpdate=true;
+        //     // }
+        //     mesh.current.material.uniforms.u_mask.value=texture;
+        // }
         // if(mesh.current.material.uniforms.u_mask.value!=null){
         //     mesh.current.material.uniforms.u_mask.value.needsUpdate=true;
         // }
