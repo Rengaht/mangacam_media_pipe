@@ -3,7 +3,16 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
 import { vertexShader, fragmentShader } from './shaders';
 
-const Cube = ({ video, canvas }) => {
+
+
+const TintColors=[
+    [0, 0, 0],
+    [247, 39, 152],
+    [245, 125, 31],
+    [235, 244, 0]
+];
+
+const Cube = ({ video, canvas, mask }) => {
     const mesh = useRef();
 
     // const texture = useMemo(() => new THREE.CanvasTexture(canvas), [canvas]);
@@ -12,7 +21,8 @@ const Cube = ({ video, canvas }) => {
         u_resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
         pixelSize: { value: 16 },
         u_canvas: { value: null },
-        u_texture: { value: null }
+        u_texture: { value: null },
+        u_mask: { value: null },
     }), []);
 
   
@@ -33,6 +43,17 @@ const Cube = ({ video, canvas }) => {
         if(mesh.current.material.uniforms.u_canvas.value!=null){
             mesh.current.material.uniforms.u_canvas.value.needsUpdate=true;
         }
+        if(mask!=null && mesh.current.material.uniforms.u_mask.value==null){
+            const texture= new THREE.CanvasTexture(mask);
+            // texture.onload=()=>{
+            //     texture.needsUpdate=true;
+            // }
+            mesh.current.material.uniforms.u_mask.value=texture;
+        }
+        // if(mesh.current.material.uniforms.u_mask.value!=null){
+        //     mesh.current.material.uniforms.u_mask.value.needsUpdate=true;
+        // }
+
         // mesh.current.material.uniforms.u_resolution.value = new THREE.Vector2([window.innerWidth, window.innerHeight]);
         // mesh.current.material.uniforms.u_texture.value.needsUpdate=true;
         // texture.needsUpdate=true;

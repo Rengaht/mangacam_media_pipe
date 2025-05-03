@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { FilesetResolver, PoseLandmarker, DrawingUtils } from '@mediapipe/tasks-vision';
+import { FilesetResolver, PoseLandmarker, DrawingUtils, ImageSegmenter } from '@mediapipe/tasks-vision';
 import { Scene } from './scene';
-import { Canvas } from "@react-three/fiber";
 
 
 import './App.css'
+
+const REMOVE_BG=false;
 
 function App() {
   
@@ -13,10 +14,15 @@ function App() {
 
   const refLastVideoTime = useRef(-1);
   const refPoseLandmarker = useRef(null);
+  const refImageSegmenter = useRef(null);
+
   const refVideo=useRef();
   const refCanvas=useRef();
 
   const refSwords=useRef([]);
+  const refHat=useRef();
+
+  const refMask=useRef();
 
   async function startCamera() {
     
@@ -52,10 +58,71 @@ function App() {
           },
           runningMode: 'VIDEO',
           numPoses: 2,
-          outputSegmentationMasks: true,
+          outputSegmentationMasks: false,
         });
-  }
+    if(REMOVE_BG){
+      refImageSegmenter.current = await ImageSegmenter.createFromOptions(vision, {
+        baseOptions: {
+          modelAssetPath:
+            "model/selfie_segmenter_landscape.tflite",
+        },
+        outputCategoryMask: false,
+        outputConfidenceMasks: true,
+        runningMode: "VIDEO"
+      });
 
+    }
+  }
+  function onImageSegment(result) {
+    
+    const video = refVideo.current;
+    const context=refMask.current.getContext("2d");
+    
+    const { videoWidth, videoHeight } = video;
+    const { width, height } = refMask.current;
+
+    
+    if (videoWidth !== width || videoHeight !== height) {
+
+      console.log("videoWidth: ", videoWidth, "videoHeight: ", videoHeight);
+      console.log("width: ", width, "height: ", height);
+  
+      refMask.current.width = videoWidth;
+      refMask.current.height = videoHeight;
+    }
+    
+    let imageData = context.getImageData(
+      0,
+      0,
+      videoWidth,
+      videoHeight
+    ).data;
+  
+    
+    const mask = result.confidenceMasks[0].getAsFloat32Array();
+    
+    let j = 0;
+    for (let i = 0; i < mask.length; ++i) {
+      const maskVal = Math.round(mask[i] * 255.0);
+      imageData[j] = 0.0;
+      imageData[j + 1] = 255-maskVal;
+      imageData[j + 2] = 0.0;
+      imageData[j + 3] = 255- maskVal;
+      j += 4;
+    }
+    
+    const uint8Array = new Uint8ClampedArray(imageData.buffer);
+    const dataNew = new ImageData(
+      uint8Array,
+      videoWidth,
+      videoHeight
+    );
+    
+    context.putImageData(dataNew, 0, 0, 0, 0, width, height);
+
+    
+  
+  }
   async function renderLoop() {
 
     const video = refVideo.current;
@@ -72,8 +139,13 @@ function App() {
         if(video.readyState >= 2){
           const detections = await refPoseLandmarker.current?.detectForVideo(video, video.currentTime*1000);
           processResults(detections);
+
+          if(REMOVE_BG && refImageSegmenter.current){
+            refImageSegmenter.current?.segmentForVideo(video, video.currentTime*1000, onImageSegment)
+          }
         }
         
+
         setFps(Math.round(1/(video.currentTime-refLastVideoTime.current)));
         refLastVideoTime.current = video.currentTime;
         
@@ -105,13 +177,7 @@ function App() {
       }
   }
 
-  function drawMask(mask){
-    const canvas = refCanvas.current;
-    const ctx=canvas.getContext("2d");
-
-    // const bitmap = mask.transferToImageBitmap();
-    ctx.drawImage(mask, 0, 0, canvas.width, canvas.height);
-  }
+  
   function distance(p1, p2){
     return Math.sqrt(Math.pow(p2.x-p1.x,2)+Math.pow(p2.y-p1.y,2));
   }
@@ -145,6 +211,7 @@ function App() {
     // const sword_length=distance(left_hand,right_hand)/2;
     const sword_scale=0.66*canvas.height/sword.height;
 
+    ctx.drawImage(refMask.current, 0, 0, canvas.width, canvas.height);
 
     ctx.save();
     ctx.translate(hand.x*canvas.width, hand.y*canvas.height);
@@ -157,12 +224,26 @@ function App() {
     ctx.restore();
 
 
-    // draw debug coordinates
-    // ctx.save();
-    //   ctx.fillStyle="red";
-    //   ctx.fillText(`lefthand= (${left_hand.x.toFixed(2)}, ${left_hand.y.toFixed(2)})`, 0,100);
-    //   ctx.fillText(`righthand= (${right_hand.x.toFixed(2)}, ${right_hand.y.toFixed(2)})`, 0,200);
-    // ctx.restore();
+    // draw hat
+    const hat=refHat.current;
+    
+    const head_center=landmarks[0][0];
+    const head_width=distance(landmarks[0][12], landmarks[0][11]);
+    const head_height=Math.max(1.0/6.0, head_width*1.2);
+
+    const hat_scale=head_height*canvas.height/hat.height;
+    const hat_width=hat.width*hat_scale;
+    const hat_height=hat.height*hat_scale;
+    
+    ctx.save();
+    ctx.translate(head_center.x*canvas.width, head_center.y*canvas.height);
+    // ctx.rotate(-Math.PI/2);
+    ctx.drawImage(hat, 
+                -hat_width/2, 
+                -hat_height, 
+                hat_width, hat_height);
+    ctx.restore();
+    
   }
 
   function drawLandMarks(landmarks) {
@@ -185,6 +266,8 @@ function App() {
     }
 
     startCamera().then(()=>{
+
+
       initMediaPipe().then(()=>{
         console.log("MediaPipe initialized");
         setInit(true);
@@ -214,15 +297,21 @@ function App() {
     refSwords.current.push(sword1);
     refSwords.current.push(sword2);
 
+    const hat=new Image();
+    hat.src="/image/hat.png";
+    refHat.current=hat;
+
+
   },[]);
 
   return (
     <>
       <video ref={refVideo} id="_capture"></video>
-      <canvas ref={refCanvas}></canvas>
+      <canvas id="_canvas" ref={refCanvas}></canvas>
+      <canvas id="_mask" ref={refMask}></canvas>
       <label className='absolute top-0 left-0 z-10 text-red-500'>{fps}</label>   
       {/* <div className='fixed top-0 left-0 w-full h-1/2'> */}
-      <Scene video={refVideo.current} canvas={refCanvas.current}/>
+      <Scene video={refVideo.current} canvas={refCanvas.current} mask={refMask.current}/>
     </>
   )
 }
