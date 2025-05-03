@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { FilesetResolver, PoseLandmarker, DrawingUtils, ImageSegmenter } from '@mediapipe/tasks-vision';
 import { Scene } from './scene';
-
+import gsap from 'gsap';
 
 import './App.css'
 
@@ -10,6 +10,8 @@ const REMOVE_BG=false;
 function App() {
   
   const [init, setInit] = useState(false);
+  const [detected, setDetected] = useState(false);
+  
   const [fps, setFps]=useState(0);
 
   const refLastVideoTime = useRef(-1);
@@ -21,6 +23,14 @@ function App() {
 
   const refSwords=useRef([]);
   const refHat=useRef();
+
+  const refCharacterLeft=useRef([]);
+  const refCharacterRight=useRef([]);
+  const refRightIndex=useRef(0);
+  const refLeftIndex=useRef(0);
+
+  const refRightProgress=useRef({value: 0});
+  const refLeftProgress=useRef({value: 0});
 
   const refMask=useRef();
 
@@ -138,7 +148,18 @@ function App() {
       // try{
         if(video.readyState >= 2){
           const detections = await refPoseLandmarker.current?.detectForVideo(video, video.currentTime*1000);
-          processResults(detections);
+          
+          // no people detected
+          if(detections.landmarks.length === 0){
+            drawCharacter();
+            // toggleText(true);
+            setDetected(false);
+
+          }else{
+            processResults(detections);
+            // toggleText(false);
+            setDetected(true);
+          }
 
           if(REMOVE_BG && refImageSegmenter.current){
             refImageSegmenter.current?.segmentForVideo(video, video.currentTime*1000, onImageSegment)
@@ -245,6 +266,76 @@ function App() {
     ctx.restore();
     
   }
+  function drawCharacter(){
+    const canvas = refCanvas.current;
+    const ctx=canvas.getContext("2d");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // draw green back
+    
+    ctx.fillStyle="rgba(0,255,0,1.0)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle="white";
+
+    const characterLeft=refCharacterLeft.current[refLeftIndex.current];
+    const characterRight=refCharacterRight.current[refRightIndex.current];
+
+    const pl=refLeftProgress.current.value;
+    const pr=refRightProgress.current.value;
+    
+    const scaleLeft=canvas.width/characterLeft.width *(pl);
+    const scaleRight=canvas.width/characterRight.width *(pr);
+    // console.log(refCharacterProgress.current.value);
+    ctx.save();
+      ctx.fillStyle=`rgba(255,255,255,${pl})`;
+      ctx.drawImage(characterLeft, 
+          canvas.width/2-characterLeft.width*scaleLeft/2, 
+          canvas.height/2-characterLeft.height*scaleLeft/2, 
+          characterLeft.width*scaleLeft, characterLeft.height*scaleLeft);
+      
+      ctx.fillStyle=`rgba(255,255,255,${pr})`;
+      ctx.drawImage(characterRight, 
+          canvas.width/2-characterRight.width*scaleRight/2, 
+          canvas.height/2-characterRight.height*scaleRight/2, 
+          characterRight.width*scaleRight, 
+          characterRight.height*scaleRight);
+    ctx.restore();
+  }
+
+  function toggleText(cover){
+
+    if(cover){
+      gsap.to("#_end",{
+          
+          opacity: 0,
+          duration: 0.25,
+          ease: "power4.out",
+          onComplete:()=>{
+            gsap.to("#_cover",{
+              opacity: 1,
+              duration: 0.25,
+              delay: 0.25,
+              ease: "power4.out",
+            });
+          }
+      })
+    }else{
+      gsap.to("#_cover",{
+          opacity: 0,
+          duration: 0.25,
+          ease: "power4.out",
+          onComplete:()=>{
+            gsap.to("#_end",{
+              opacity: 1,
+              duration: 0.5,
+              delay: 2.0,
+              ease: "power4.out",
+            });
+          }
+      })
+    }
+  }
+  
 
   function drawLandMarks(landmarks) {
     const canvas = refCanvas.current;
@@ -285,6 +376,10 @@ function App() {
   }
 
   useEffect(()=>{
+    toggleText(!detected);
+  },[detected]);
+
+  useEffect(()=>{
     initDetection();
 
     // load swords
@@ -301,6 +396,49 @@ function App() {
     hat.src="/image/hat.png";
     refHat.current=hat;
 
+    for(var i=0;i<2;++i){
+      const character=new Image();
+      character.src=`/image/character/image-${i+1}.png`;
+      refCharacterRight.current.push(character);
+    }
+    for(var i=2;i<5;++i){
+      const character=new Image();
+      character.src=`/image/character/image-${i+1}.png`;
+      refCharacterLeft.current.push(character);
+    }
+
+    const due=1500;
+    gsap.fromTo(refLeftProgress.current, {
+      value: 0
+    },{ 
+      value: 1, 
+      duration: due/1000,
+      repeat: -1,
+      ease:"power4.inOut",
+      onRepeat: ()=>{
+        refLeftIndex.current=(refLeftIndex.current+1)%refCharacterLeft.current.length;        
+      }
+    });
+    gsap.fromTo(refRightProgress.current, {
+      value: 0
+    },{ 
+      value: 1, 
+      duration: due/1000,
+      delay: due/2/1000,
+      repeat: -1,
+      ease:"power4.out",
+      onRepeat: ()=>{
+        refRightIndex.current=(refRightIndex.current+1)%refCharacterRight.current.length;        
+      }
+    });
+    
+
+    return ()=>{
+      clearInterval(p);
+      if(refPoseLandmarker.current){
+        refPoseLandmarker.current?.close();
+      }
+    }
 
   },[]);
 
@@ -312,6 +450,10 @@ function App() {
       <label className='absolute top-0 left-0 z-10 text-red-500'>{fps}</label>   
       {/* <div className='fixed top-0 left-0 w-full h-1/2'> */}
       <Scene video={refVideo.current} canvas={refCanvas.current} mask={refMask.current}/>
+
+      <img id="_end" src="/image/end.png" className='absolute top-0 left-0 w-full h-full z-10 opacity-0'/>
+      <img id="_cover" src="/image/cover.png" className='absolute top-0 left-0 w-full h-full z-10'/>
+
     </>
   )
 }
