@@ -60,7 +60,7 @@ const Cube = ({ video, canvas, mask }) => {
         // console.log(video?.videoWidth, video?.videoHeight);
 
         const ratio=video?.videoWidth/video?.videoHeight;
-        if(!isNaN(ratio)) mesh.current.scale.set(1, ratio, 1);
+        // if(!isNaN(ratio)) mesh.current.scale.set(1, ratio, 1);
 
     });
 

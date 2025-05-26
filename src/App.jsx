@@ -6,6 +6,9 @@ import gsap from 'gsap';
 import './App.css'
 
 const REMOVE_BG=false;
+const DRAW_HAT=true;
+// const IMAGE_COUNT=11;
+// const SWORD_FILE_NAME='sword.png';
 
 function App() {
   
@@ -247,25 +250,26 @@ function App() {
 
 
     // draw hat
-    const hat=refHat.current;
-    
-    const head_center=landmarks[0][0];
-    const head_width=distance(landmarks[0][12], landmarks[0][11]);
-    const head_height=Math.max(1.0/6.0, head_width*1.2);
+    if(DRAW_HAT){
+      const hat=refHat.current;
+      
+      const head_center=landmarks[0][0];
+      const head_width=distance(landmarks[0][12], landmarks[0][11]);
+      const head_height=Math.max(1.0/6.0, head_width*1.2);
 
-    const hat_scale=head_height*canvas.height/hat.height;
-    const hat_width=hat.width*hat_scale;
-    const hat_height=hat.height*hat_scale;
-    
-    ctx.save();
-    ctx.translate(head_center.x*canvas.width, head_center.y*canvas.height);
-    // ctx.rotate(-Math.PI/2);
-    ctx.drawImage(hat, 
-                -hat_width/2, 
-                -hat_height, 
-                hat_width, hat_height);
-    ctx.restore();
-    
+      const hat_scale=head_height*canvas.height/hat.height;
+      const hat_width=hat.width*hat_scale;
+      const hat_height=hat.height*hat_scale;
+      
+      ctx.save();
+      ctx.translate(head_center.x*canvas.width, head_center.y*canvas.height);
+      // ctx.rotate(-Math.PI/2);
+      ctx.drawImage(hat, 
+                  -hat_width/2, 
+                  -hat_height, 
+                  hat_width, hat_height);
+      ctx.restore();
+    }
   }
   function drawCharacter(){
     const canvas = refCanvas.current;
@@ -291,13 +295,15 @@ function App() {
       ctx.fillStyle=`rgba(255,255,255,${pl})`;
       ctx.drawImage(characterLeft, 
           canvas.width/2-characterLeft.width*scaleLeft/2, 
-          canvas.height/2-characterLeft.height*scaleLeft/2, 
+          // canvas.height/2-characterLeft.height*scaleLeft/2, 
+          canvas.height-characterLeft.height*scaleLeft, 
           characterLeft.width*scaleLeft, characterLeft.height*scaleLeft);
       
       ctx.fillStyle=`rgba(255,255,255,${pr})`;
       ctx.drawImage(characterRight, 
           canvas.width/2-characterRight.width*scaleRight/2, 
-          canvas.height/2-characterRight.height*scaleRight/2, 
+          // canvas.height/2-characterRight.height*scaleRight/2, 
+          canvas.height-characterRight.height*scaleRight, 
           characterRight.width*scaleRight, 
           characterRight.height*scaleRight);
     ctx.restore();
@@ -385,10 +391,10 @@ function App() {
 
     // load swords
     const sword1=new Image();
-    sword1.src="/image/sword-1.png";
+    sword1.src="/image/sword-3.png";
     
     const sword2=new Image();
-    sword2.src="/image/sword-2.png";
+    sword2.src="/image/sword.png";
 
     refSwords.current.push(sword1);
     refSwords.current.push(sword2);
@@ -397,12 +403,12 @@ function App() {
     hat.src="/image/hat.png";
     refHat.current=hat;
 
-    for(var i=0;i<2;++i){
+    for(var i=0;i<5;++i){
       const character=new Image();
       character.src=`/image/character/image-${i+1}.png`;
       refCharacterRight.current.push(character);
     }
-    for(var i=2;i<5;++i){
+    for(var i=5;i<10;++i){
       const character=new Image();
       character.src=`/image/character/image-${i+1}.png`;
       refCharacterLeft.current.push(character);
@@ -415,7 +421,7 @@ function App() {
       value: 1, 
       duration: due/1000,
       repeat: -1,
-      ease:"power4.inOut",
+      // ease:"power4.inOut",
       onRepeat: ()=>{
         refLeftIndex.current=(refLeftIndex.current+1)%refCharacterLeft.current.length;        
       }
@@ -425,9 +431,10 @@ function App() {
     },{ 
       value: 1, 
       duration: due/1000,
-      delay: due/2/1000,
+      delay: due/1000/2,
       repeat: -1,
-      ease:"power4.out",
+      // repeatDelay: due/500,
+      // ease:"power4.out",
       onRepeat: ()=>{
         refRightIndex.current=(refRightIndex.current+1)%refCharacterRight.current.length;        
       }
