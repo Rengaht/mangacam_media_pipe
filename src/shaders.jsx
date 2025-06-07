@@ -122,8 +122,8 @@ void main() {
     
     
     
-    gl_FragColor = refineColor(destcolor);
-    // gl_FragColor=canvas;
+    // gl_FragColor = refineColor(destcolor);
+    gl_FragColor=canvas;
     
     // gl_FragColor= vec4(mask.r, 1.0,0.0,1.0);
 

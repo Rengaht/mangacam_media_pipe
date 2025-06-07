@@ -19,7 +19,7 @@ const Cube = ({ video, canvas, mask }) => {
     const uniforms = useMemo(() => ({
         u_time: { value: 0 },
         u_resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
-        pixelSize: { value: 16 },
+        pixelSize: { value: 8 },
         u_canvas: { value: null },
         u_texture: { value: null },
         u_mask: { value: null },

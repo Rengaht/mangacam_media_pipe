@@ -1,19 +1,32 @@
 import { useEffect, useRef, useState } from 'react'
 import { FilesetResolver, PoseLandmarker, DrawingUtils, ImageSegmenter } from '@mediapipe/tasks-vision';
 import { Scene } from './scene';
+import { useSound } from './useSound';
 import gsap from 'gsap';
 
 import './App.css'
 
 const REMOVE_BG=false;
 const DRAW_HAT=true;
-// const IMAGE_COUNT=11;
+const SOUND_THRESHOLD=0.02;
+const PLAY_TIME=10;
+const OUTRO_TIME=10;
+
+const IMAGE_COUNT_LEFT=4;
+const IMAGE_COUNT_RIGHT=4;
 // const SWORD_FILE_NAME='sword.png';
+
+const STATE={
+  INTRO: "intro",
+  PLAY: "play",
+  OUTRO: "outro",
+}
 
 function App() {
   
   const [init, setInit] = useState(false);
   const [detected, setDetected] = useState(false);
+  const [state, setState] = useState(STATE.INTRO);
   
   const [fps, setFps]=useState(0);
 
@@ -32,10 +45,19 @@ function App() {
   const refRightIndex=useRef(0);
   const refLeftIndex=useRef(0);
 
+  const refNextScene=useRef(null);
+  const refState=useRef(STATE.INTRO);
+
   const refRightProgress=useRef({value: 0});
   const refLeftProgress=useRef({value: 0});
 
   const refMask=useRef();
+
+  const { playSound } = useSound();
+  
+  const refLastHand=useRef();
+
+
 
   async function startCamera() {
     
@@ -49,6 +71,12 @@ function App() {
       
       video.srcObject = stream;
       video.play();
+      console.log("Camera started", video.videoWidth, video.videoHeight);
+      // refCanvas.current.width = video.videoWidth;
+      // refCanvas.current.height = video.videoHeight;
+      // refMask.current.width = video.videoWidth;
+      // refMask.current.height = video.videoHeight;
+
 
     }catch(err){
       console.error("Error accessing camera: ", err);
@@ -141,7 +169,7 @@ function App() {
     const video = refVideo.current;
     // const video=document.getElementById("_capture");
     
-    if (video.currentTime !== refLastVideoTime.current) {
+    if (video?.currentTime !== refLastVideoTime.current) {
 
       const canvas = refCanvas.current;
       const ctx=canvas.getContext("2d");
@@ -154,16 +182,36 @@ function App() {
           const detections = await refPoseLandmarker.current?.detectForVideo(video, video.currentTime*1000);
           
           // no people detected
-          if(detections?.landmarks.length === 0){
-            drawCharacter();
-            // toggleText(true);
-            setDetected(false);
+          // if(true || detections?.landmarks.length === 0){
+          //   drawCharacter();
+          //   // toggleText(true);
+          //   setDetected(false);
 
-          }else{
-            processResults(detections);
-            // toggleText(false);
-            setDetected(true);
+          // }else{
+          //   processResults(detections);
+          //   // toggleText(false);
+          //   setDetected(true);
+          // }
+
+          switch(refState.current){
+            // case STATE.INTRO:
+            //   if(detections.landmarks.length > 0){
+            //     setState(()=>STATE.PLAY);
+            //     setDetected(true);             
+            //   }else{
+            //     drawCharacter();
+            //     setDetected(false);
+            //   }
+            //   break;
+            // case STATE.PLAY:
+            //   processResults(detections);
+            //   break;
+            default:
+            case STATE.OUTRO:
+              drawNextScene();
+              break;
           }
+
 
           if(REMOVE_BG && refImageSegmenter.current){
             refImageSegmenter.current?.segmentForVideo(video, video.currentTime*1000, onImageSegment)
@@ -193,8 +241,9 @@ function App() {
         const landmarks = results.landmarks;
         // drawLandMarks(landmarks);
         drawSword(landmarks);
-        // console.log("Landmarks: ", landmarks);
-        // Process landmarks here
+        if(DRAW_HAT){
+          drawHat(landmarks);
+        }
       }
     
       if(results.segmentationMasks && results.segmentationMasks.length > 0){
@@ -202,6 +251,22 @@ function App() {
       }
   }
 
+  function computeVelocity(vec){
+    if(refLastHand.current){
+      const lastHand=refLastHand.current;
+      const delta={
+        x: vec.x-lastHand.x,
+        y: vec.y-lastHand.y
+      };
+      // console.log(delta);
+      const dist=distance(delta, {x: 0, y: 0});
+      console.log("distance: ", dist);
+      if(dist > SOUND_THRESHOLD){
+        playSound();
+      }
+    }
+    refLastHand.current=vec;
+  }
   
   function distance(p1, p2){
     return Math.sqrt(Math.pow(p2.x-p1.x,2)+Math.pow(p2.y-p1.y,2));
@@ -218,42 +283,71 @@ function App() {
     let left_hand=landmarks[0][15];
     let right_hand=landmarks[0][16];
     
-    if(left_hand.y > right_hand.y){
+    if(left_hand.visibility < 0.5 && right_hand.visibility < 0.5){
+      // no hands detected
+      return;
+    }
+    if(left_hand.visibility < 0.5){
+      // only right hand detected
+      arm_index=20;
+      hand_index=16;
+    }else if(right_hand.visibility < 0.5){
+      // only left hand detected
+      arm_index=19;
+      hand_index=15;
+
+    }else if(left_hand.y > right_hand.y){
+      // choose the higher if both exist
       arm_index=20;
       hand_index=16;
     }
 
-    const hand=landmarks[0][hand_index];    
-    const hand_direction=Math.atan2(hand.y-landmarks[0][arm_index].y, hand.x-landmarks[0][arm_index].x);
-    // const right_hand_direction=landmarks[0].landmarks[20]-right_hand;
-
     const canvas = refCanvas.current;
     const ctx=canvas.getContext("2d");
+      
+
+    const hand=landmarks[0][hand_index];    
+    if(hand.visibility > 0.5){
+      const vec={
+        x: hand.x-landmarks[0][arm_index].x,
+        y: hand.y-landmarks[0][arm_index].y,
+      };
+      const hand_direction=Math.atan2(vec.y, vec.x);
+      // const right_hand_direction=landmarks[0].landmarks[20]-right_hand;
+      computeVelocity(vec);
+
+      
+      const sword=refSwords.current[0];
+
+      // set length of sword to half of the distance between hands
+      // const sword_length=distance(left_hand,right_hand)/2;
+      const sword_scale=0.66*canvas.height/sword.height;
+
+      ctx.drawImage(refMask.current, 0, 0, canvas.width, canvas.height);
+
+      ctx.save();
+      ctx.translate(hand.x*canvas.width, hand.y*canvas.height);
+      ctx.rotate(hand_direction-Math.PI/2);
+      ctx.drawImage(sword, 
+                  -sword.width*sword_scale/2, 
+                  -sword.height*sword_scale, 
+                  sword.width*sword_scale, sword.height*sword_scale);
+
+      ctx.restore();
+    }
+  }
     
-    const sword=refSwords.current[0];
+  function drawHat(landmarks){
+      const canvas = refCanvas.current;
+      const ctx=canvas.getContext("2d");
+    
 
-    // set length of sword to half of the distance between hands
-    // const sword_length=distance(left_hand,right_hand)/2;
-    const sword_scale=0.66*canvas.height/sword.height;
-
-    ctx.drawImage(refMask.current, 0, 0, canvas.width, canvas.height);
-
-    ctx.save();
-    ctx.translate(hand.x*canvas.width, hand.y*canvas.height);
-    ctx.rotate(hand_direction-Math.PI/2);
-    ctx.drawImage(sword, 
-                -sword.width*sword_scale/2, 
-                -sword.height*sword_scale, 
-                sword.width*sword_scale, sword.height*sword_scale);
-
-    ctx.restore();
-
-
-    // draw hat
-    if(DRAW_HAT){
       const hat=refHat.current;
       
       const head_center=landmarks[0][0];
+      if(!head_center || head_center.visibility < 0.5) return;
+
+
       const head_width=distance(landmarks[0][12], landmarks[0][11]);
       const head_height=Math.max(1.0/6.0, head_width*1.2);
 
@@ -269,7 +363,7 @@ function App() {
                   -hat_height, 
                   hat_width, hat_height);
       ctx.restore();
-    }
+    
   }
   function drawCharacter(){
     const canvas = refCanvas.current;
@@ -307,6 +401,24 @@ function App() {
           characterRight.width*scaleRight, 
           characterRight.height*scaleRight);
     ctx.restore();
+  }
+
+  function drawNextScene(){
+    const canvas = refCanvas.current;
+    const ctx=canvas.getContext("2d");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // ctx.fillStyle="rgba(0,255,0,1.0)";
+    // ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    const nextScene=refNextScene.current;
+    const scale=Math.max(canvas.height/nextScene.height, canvas.width/nextScene.width);
+    
+    ctx.drawImage(nextScene, 
+                  (canvas.width-nextScene.width*scale)/2,
+                  (canvas.height-nextScene.height*scale)/2,
+                  nextScene.width*scale,
+                  nextScene.height*scale);
   }
 
   function toggleText(cover){
@@ -383,8 +495,33 @@ function App() {
   }
 
   useEffect(()=>{
-    toggleText(!detected);
-  },[detected]);
+
+    console.log('state changed: ', state);
+    refState.current=state;
+
+    switch(state){
+      case STATE.INTRO:
+        toggleText(true);
+        break;
+      case STATE.PLAY:
+        toggleText(false);
+        setTimeout(()=>{
+          setState(()=>STATE.OUTRO);          
+        }, PLAY_TIME*1000);
+        break;
+      case STATE.OUTRO:
+        setTimeout(()=>{
+          setState(()=>STATE.INTRO);        
+        }, OUTRO_TIME*1000);
+        break;
+    }
+
+
+  },[state]);
+
+  // useEffect(()=>{
+  //   toggleText(!detected);
+  // },[detected]);
 
   useEffect(()=>{
     initDetection();
@@ -403,22 +540,26 @@ function App() {
     hat.src="/image/hat.png";
     refHat.current=hat;
 
-    for(var i=0;i<5;++i){
+    for(var i=0;i<IMAGE_COUNT_LEFT;++i){
       const character=new Image();
       character.src=`/image/character/image-${i+1}.png`;
       refCharacterRight.current.push(character);
     }
-    for(var i=5;i<10;++i){
+    for(var i=IMAGE_COUNT_LEFT-1;i<IMAGE_COUNT_LEFT+IMAGE_COUNT_RIGHT;++i){
       const character=new Image();
       character.src=`/image/character/image-${i+1}.png`;
       refCharacterLeft.current.push(character);
     }
 
+    refNextScene.current=new Image();
+    refNextScene.current.src="/image/next.png";
+
+
     const due=1500;
     gsap.fromTo(refLeftProgress.current, {
       value: 0
     },{ 
-      value: 1, 
+      value: 0.7, 
       duration: due/1000,
       repeat: -1,
       // ease:"power4.inOut",
@@ -429,7 +570,7 @@ function App() {
     gsap.fromTo(refRightProgress.current, {
       value: 0
     },{ 
-      value: 1, 
+      value: 0.7, 
       duration: due/1000,
       delay: due/1000/2,
       repeat: -1,
@@ -451,18 +592,18 @@ function App() {
   },[]);
 
   return (
-    <>
+    <div className={`h-full aspect-[250/225] relative`}>
       <video ref={refVideo} id="_capture" className='hidden'></video>
-      <canvas id="_canvas" ref={refCanvas} className='hidden'></canvas>
-      <canvas id="_mask" ref={refMask} className='hidden'></canvas>
+      <canvas id="_canvas" ref={refCanvas} className='hidden' width="1200" height="1080"></canvas>
+      <canvas id="_mask" ref={refMask} className='hidden' width="1200" height="1080"></canvas>
       <label className='absolute top-0 left-0 z-10 text-red-500'>{fps}</label>   
       {/* <div className='fixed top-0 left-0 w-full h-1/2'> */}
       <Scene video={refVideo.current} canvas={refCanvas.current} mask={refMask.current}/>
 
-      <img id="_end" src="/image/end.png" className='absolute top-0 left-0 w-full h-full z-10 opacity-0'/>
-      <img id="_cover" src="/image/cover.png" className='absolute top-0 left-0 w-full h-full z-10'/>
+      <img id="_end" src="/image/end.png" className='absolute top-0 left-0 w-full h-full z-10 opacity-0 object-cover object-left'/>
+      <img id="_cover" src="/image/cover.png" className='absolute top-0 left-0 w-full h-full z-10 object-cover object-left'/>
 
-    </>
+    </div>
   )
 }
 

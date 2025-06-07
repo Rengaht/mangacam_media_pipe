@@ -2,9 +2,11 @@
 
 #root {
   @apply fixed top-0 left-0 right-0 bottom-0 overflow-hidden;
+  @apply flex justify-center items-center;
+  @apply bg-black;
 }
 
 video, canvas{
-  @apply absolute top-0 left-0 w-full h-full object-cover;
+  /* @apply absolute top-0 left-0 w-[1200px] h-[1080px]; */
 }
  
