@@ -111,7 +111,8 @@ void main() {
 
     pixelUV += offset;
     
-    vec4 color = texture2D(u_texture, pixelUV*vec2(1200.0/1440.0,1.0));
+    float scale=1200.0/1440.0;
+    vec4 color = texture2D(u_texture, vec2((pixelUV.x-0.5)*scale+0.5,pixelUV.y));
 
     vec4 canvas = texture2D(u_canvas, pixelUV);
     vec4 destcolor;

@@ -660,7 +660,7 @@ function App() {
       <label className='absolute top-0 left-0 z-10 text-red-500'>{fps}</label>   
       {/* <div className='fixed top-0 left-0 w-full h-1/2'> */}
       <Scene width={RESOLUTION_WIDTH} height={RESOLUTION_HEIGHT}
-        video={refVideo.current} canvas={refCanvas.current} mask={refMask.current} state={state}/>
+        video={refVideo.current} canvas={refCanvas.current} mask={refMask.current} state={refState.current}/>
 
       <img id="_end" src="/image/end.png" className='absolute top-0 left-0 w-full h-full z-10 opacity-0 object-cover object-left'/>
       <img id="_cover" src="/image/cover.png" className='absolute top-0 left-0 w-full h-full z-10 object-cover object-left'/>
