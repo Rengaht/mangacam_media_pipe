@@ -7,6 +7,6 @@
 }
 
 video, canvas{
-  /* @apply absolute top-0 left-0 w-[1200px] h-[1080px]; */
+  @apply absolute top-0 left-0 w-full h-full object-cover;
 }
  

@@ -3,17 +3,28 @@ import { FilesetResolver, PoseLandmarker, DrawingUtils, ImageSegmenter } from '@
 import { Scene } from './scene';
 import { useSound } from './useSound';
 import gsap from 'gsap';
+import { SlowMo } from "gsap/EasePack";
+
+gsap.registerPlugin(SlowMo);
+
+
 
 import './App.css'
 
 const REMOVE_BG=false;
 const DRAW_HAT=true;
 const SOUND_THRESHOLD=0.02;
+
 const PLAY_TIME=10;
-const OUTRO_TIME=10;
+const OUTRO_TIME=5;
+const INTRO_TIME=5;
 
 const IMAGE_COUNT_LEFT=4;
 const IMAGE_COUNT_RIGHT=4;
+
+const RESOLUTION_WIDTH=1200;
+const RESOLUTION_HEIGHT=1080;
+
 // const SWORD_FILE_NAME='sword.png';
 
 const STATE={
@@ -27,6 +38,7 @@ function App() {
   const [init, setInit] = useState(false);
   const [detected, setDetected] = useState(false);
   const [state, setState] = useState(STATE.INTRO);
+  
   
   const [fps, setFps]=useState(0);
 
@@ -50,6 +62,8 @@ function App() {
 
   const refRightProgress=useRef({value: 0});
   const refLeftProgress=useRef({value: 0});
+  const refNextSceneProgress=useRef({value: 0});
+  const refReady=useRef(false);
 
   const refMask=useRef();
 
@@ -194,19 +208,19 @@ function App() {
           // }
 
           switch(refState.current){
-            // case STATE.INTRO:
-            //   if(detections.landmarks.length > 0){
-            //     setState(()=>STATE.PLAY);
-            //     setDetected(true);             
-            //   }else{
-            //     drawCharacter();
-            //     setDetected(false);
-            //   }
-            //   break;
-            // case STATE.PLAY:
-            //   processResults(detections);
-            //   break;
-            default:
+            case STATE.INTRO:
+              if(refReady.current && detections.landmarks.length > 0){
+                setState(()=>STATE.PLAY);
+                setDetected(true);             
+              }else{
+                drawCharacter();
+                setDetected(false);
+              }
+              break;
+            case STATE.PLAY:
+              processResults(detections);
+              break;
+            // default:
             case STATE.OUTRO:
               drawNextScene();
               break;
@@ -323,7 +337,7 @@ function App() {
       // const sword_length=distance(left_hand,right_hand)/2;
       const sword_scale=0.66*canvas.height/sword.height;
 
-      ctx.drawImage(refMask.current, 0, 0, canvas.width, canvas.height);
+      // ctx.drawImage(refMask.current, 0, 0, canvas.width, canvas.height);
 
       ctx.save();
       ctx.translate(hand.x*canvas.width, hand.y*canvas.height);
@@ -331,18 +345,22 @@ function App() {
       ctx.drawImage(sword, 
                   -sword.width*sword_scale/2, 
                   -sword.height*sword_scale, 
-                  sword.width*sword_scale, sword.height*sword_scale);
+                  sword.width*sword_scale,
+                  sword.height*sword_scale);
 
       ctx.restore();
     }
   }
     
   function drawHat(landmarks){
-      const canvas = refCanvas.current;
+    if(!landmarks || landmarks.length === 0) return;
+  
+    const canvas = refCanvas.current;
       const ctx=canvas.getContext("2d");
     
 
       const hat=refHat.current;
+      
       
       const head_center=landmarks[0][0];
       if(!head_center || head_center.visibility < 0.5) return;
@@ -408,50 +426,68 @@ function App() {
     const ctx=canvas.getContext("2d");
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // ctx.fillStyle="rgba(0,255,0,1.0)";
-    // ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle="rgba(0,0,0,1.0)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
     
     const nextScene=refNextScene.current;
-    const scale=Math.max(canvas.height/nextScene.height, canvas.width/nextScene.width);
-    
+    let scale=Math.max(canvas.height/nextScene.height, canvas.width/nextScene.width);
+    const scalex=scale*Math.min(refNextSceneProgress.current.value*3, 1);
+
+    const delayy=0.33;
+    scale*=Math.max(0,(refNextSceneProgress.current.value-delayy)/(1-delayy));
+
     ctx.drawImage(nextScene, 
-                  (canvas.width-nextScene.width*scale)/2,
+                  (canvas.width-nextScene.width*scalex)/2,
                   (canvas.height-nextScene.height*scale)/2,
-                  nextScene.width*scale,
-                  nextScene.height*scale);
+                  nextScene.width*scalex,
+                  nextScene.height*scale,                  
+                  (canvas.width-nextScene.width*scalex)/2,
+                  (canvas.height-nextScene.height*scale)/2,
+                  nextScene.width*scalex,
+                  nextScene.height*scale,                  
+                );
   }
 
-  function toggleText(cover){
+  function toggleText(){
 
-    if(cover){
-      gsap.to("#_end",{
-          
-          opacity: 0,
-          duration: 0.25,
-          ease: "power4.out",
-          onComplete:()=>{
-            gsap.to("#_cover",{
-              opacity: 1,
-              duration: 0.25,
-              delay: 0.25,
-              ease: "power4.out",
-            });
-          }
-      })
-    }else{
-      gsap.to("#_cover",{
-          opacity: 0,
-          duration: 0.25,
-          ease: "power4.out",
-          onComplete:()=>{
-            gsap.to("#_end",{
-              opacity: 1,
-              duration: 0.5,
-              delay: 2.0,
-              ease: "power4.out",
-            });
-          }
-      })
+    switch(state){
+      case STATE.INTRO:
+        gsap.to("#_end",{            
+            opacity: 0,
+            duration: 0.25,
+            ease: "power4.out",
+            onComplete:()=>{
+              gsap.to("#_cover",{
+                opacity: 1,
+                duration: 0.25,
+                delay: 0.25,
+                ease: "power4.out",                
+              });
+            }
+        })
+        break;
+      case STATE.PLAY:
+        gsap.to("#_cover",{
+            opacity: 0,
+            duration: 0.25,
+            ease: "power4.out",
+            onComplete:()=>{
+              gsap.to("#_end",{
+                opacity: 1,
+                duration: 0.5,
+                delay: 2.0,
+                ease: "power4.out",
+              });
+            }
+        });
+        break;
+      case STATE.OUTRO:
+        gsap.to("#_end",{
+            opacity: 0,
+            duration: 0.25,
+            ease: "power4.out",            
+        });
+        break;
     }
   }
   
@@ -502,6 +538,11 @@ function App() {
     switch(state){
       case STATE.INTRO:
         toggleText(true);
+        
+        setTimeout(()=>{
+          refReady.current=true;  
+        }, INTRO_TIME*1000);
+
         break;
       case STATE.PLAY:
         toggleText(false);
@@ -510,11 +551,31 @@ function App() {
         }, PLAY_TIME*1000);
         break;
       case STATE.OUTRO:
-        setTimeout(()=>{
-          setState(()=>STATE.INTRO);        
-        }, OUTRO_TIME*1000);
+        // setTimeout(()=>{
+          
+        //   setState(()=>STATE.INTRO);      
+        //   refReady.current=false;  
+
+        // }, OUTRO_TIME*1000);
+        
+        gsap.to(refNextSceneProgress.current, {
+          value: 1.0,
+          repeat:1,
+          yoyo:true,
+          duration: 0.8,
+          delay: 1,
+          repeatDelay: OUTRO_TIME,
+          ease: "slow(0.3,0.7,false)",
+          onComplete:()=>{
+            setState(()=>STATE.INTRO);      
+            refReady.current=false; 
+          }
+        });
+
         break;
     }
+
+    toggleText();
 
 
   },[state]);
@@ -559,7 +620,7 @@ function App() {
     gsap.fromTo(refLeftProgress.current, {
       value: 0
     },{ 
-      value: 0.7, 
+      value: 1, 
       duration: due/1000,
       repeat: -1,
       // ease:"power4.inOut",
@@ -570,7 +631,7 @@ function App() {
     gsap.fromTo(refRightProgress.current, {
       value: 0
     },{ 
-      value: 0.7, 
+      value: 1, 
       duration: due/1000,
       delay: due/1000/2,
       repeat: -1,
@@ -594,11 +655,12 @@ function App() {
   return (
     <div className={`h-full aspect-[250/225] relative`}>
       <video ref={refVideo} id="_capture" className='hidden'></video>
-      <canvas id="_canvas" ref={refCanvas} className='hidden' width="1200" height="1080"></canvas>
-      <canvas id="_mask" ref={refMask} className='hidden' width="1200" height="1080"></canvas>
+      <canvas id="_canvas" ref={refCanvas} className='hidden' width={RESOLUTION_WIDTH} height={RESOLUTION_HEIGHT}></canvas>
+      <canvas id="_mask" ref={refMask} className='hidden' width={RESOLUTION_WIDTH} height={RESOLUTION_HEIGHT}></canvas>
       <label className='absolute top-0 left-0 z-10 text-red-500'>{fps}</label>   
       {/* <div className='fixed top-0 left-0 w-full h-1/2'> */}
-      <Scene video={refVideo.current} canvas={refCanvas.current} mask={refMask.current}/>
+      <Scene width={RESOLUTION_WIDTH} height={RESOLUTION_HEIGHT}
+        video={refVideo.current} canvas={refCanvas.current} mask={refMask.current} state={state}/>
 
       <img id="_end" src="/image/end.png" className='absolute top-0 left-0 w-full h-full z-10 opacity-0 object-cover object-left'/>
       <img id="_cover" src="/image/cover.png" className='absolute top-0 left-0 w-full h-full z-10 object-cover object-left'/>

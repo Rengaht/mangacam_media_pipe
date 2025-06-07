@@ -12,17 +12,18 @@ const TintColors=[
     [235, 244, 0]
 ];
 
-const Cube = ({ video, canvas, mask }) => {
+const Cube = ({ video, canvas, mask, state: sceneState, width, height }) => {
     const mesh = useRef();
 
     // const texture = useMemo(() => new THREE.CanvasTexture(canvas), [canvas]);
     const uniforms = useMemo(() => ({
         u_time: { value: 0 },
-        u_resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
+        u_resolution: { value: new THREE.Vector2(width, height) },
         pixelSize: { value: 8 },
         u_canvas: { value: null },
         u_texture: { value: null },
         u_mask: { value: null },
+        blendColor: { value: 1 },
     }), []);
 
   
@@ -33,7 +34,7 @@ const Cube = ({ video, canvas, mask }) => {
         mesh.current.material.uniforms.u_time.value = clock.getElapsedTime();
 
         // set uniforms
-        if(video?.readyState>=2 && mesh.current.material.uniforms.u_texture.value==null){
+        if(video?.readyState>=2 && sceneState=='play' && mesh.current.material.uniforms.u_texture.value==null){
             mesh.current.material.uniforms.u_texture.value = new THREE.VideoTexture(video);
             // mesh.current.geomtry.args[0]=[video.videoWidth, video.videoHeight, 1, 1];
         }
@@ -43,6 +44,10 @@ const Cube = ({ video, canvas, mask }) => {
         if(mesh.current.material.uniforms.u_canvas.value!=null){
             mesh.current.material.uniforms.u_canvas.value.needsUpdate=true;
         }
+
+        if(sceneState=='outro') mesh.current.material.uniforms.blendColor.value = 0.0;
+        else mesh.current.material.uniforms.blendColor.value = 1.0;
+
         // if(mask!=null && mesh.current.material.uniforms.u_mask.value==null){
         //     const texture= new THREE.CanvasTexture(mask);
         //     // texture.onload=()=>{
@@ -89,7 +94,7 @@ const Cube = ({ video, canvas, mask }) => {
 
     return (
         <mesh ref={mesh}>
-            <planeGeometry args={[1920,1080,1,1]} />
+            <planeGeometry args={[width,height,1,1]} />
             <shaderMaterial
                 fragmentShader={fragmentShader}
                 vertexShader={vertexShader}

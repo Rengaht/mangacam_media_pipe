@@ -22,6 +22,7 @@ uniform sampler2D u_mask;
 uniform vec2 u_resolution;
 uniform float pixelSize;
 uniform float u_time;
+uniform float blendColor;
 
 
 vec4 palette[10] = vec4[](
@@ -99,7 +100,7 @@ vec4 refineColor(vec4 color){
     // output_color=smoothstep(vec3(0.3), vec3(0.7),output_color);
 
     int level=int(floor(gray*6.0));
-    return palette3[level];
+    return palette3[level]*blendColor+color*(1.0-blendColor);
 }
 
 void main() {
@@ -122,8 +123,8 @@ void main() {
     
     
     
-    // gl_FragColor = refineColor(destcolor);
-    gl_FragColor=canvas;
+    gl_FragColor = refineColor(destcolor);
+    // gl_FragColor=canvas;
     
     // gl_FragColor= vec4(mask.r, 1.0,0.0,1.0);
 
