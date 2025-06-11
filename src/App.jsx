@@ -613,7 +613,7 @@ function App() {
     }
 
     refNextScene.current=new Image();
-    refNextScene.current.src="/image/next.png";
+    refNextScene.current.src="/image/next-2.png";
 
 
     const due=1500;
