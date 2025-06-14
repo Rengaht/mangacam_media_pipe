@@ -23,7 +23,7 @@ const Cube = ({ video, canvas, mask, state: sceneState, width, height, opacity }
         u_canvas: { value: null },
         u_texture: { value: null },
         u_mask: { value: null },
-        blendColor: { value: 1 },
+        blendColor: { value: sceneState=='outro'? 0:1 },
         u_opacity: { value: 1 },
     }), []);
 

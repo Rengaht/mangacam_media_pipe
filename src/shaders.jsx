@@ -13,6 +13,7 @@ void main() {
 `;
 
 export const fragmentShader = `
+
 varying vec2 vUv;
 
 uniform sampler2D u_texture;
@@ -104,29 +105,37 @@ vec4 refineColor(vec4 color){
     return palette3[level]*blendColor+color*(1.0-blendColor);
 }
 
+
 void main() {
   
     vec2 uv = vUv;
     vec2 pixelUV = floor(uv * u_resolution / (pixelSize)) * (pixelSize) / u_resolution;
-
-    float portion=noise(vec2(pixelUV.x*0.2 + u_time*0.2 ,pixelUV.y * 38.2 + sin(u_time*0.1)*12.0));
-    float noise1=noise(pixelUV.x*2.2 + pixelUV.y * 120.2 + sin(u_time*20.5)*200.0);
+    float noise1=noise(pixelUV.x*1.2 + pixelUV.y * 80.2 + sin(u_time*20.5)*200.0);
     vec2 offset=vec2(0.0, smoothstep(0.95, 1.0,noise1))*20.0*pixelSize/u_resolution;
+
 
     pixelUV += offset;
 
-    float threshold=0.15;
+    float threshold=0.05;
     if(blendColor==0.0){
+        float portion=noise(vec2(pixelUV.x*1.33 + u_time*(noise1>0.9? 0.55:-0.65) ,pixelUV.y*29.2 + u_time*0.15));
+
         if(portion>threshold){
-            pixelUV=uv;
-        }else{
-            float deltax=smoothstep(0.2, 0.8, pixelUV.y+pixelUV.x*0.1+(portion*0.2));            
-            pixelUV=vec2(deltax,pixelUV.y);            
-        }
+            // pixelUV=uv;
+            gl_FragColor = texture2D(u_canvas, uv);
+            return;
+        }else{                   
+            // gl_FragColor = texture2D(u_canvas, vec2(clamp(pixelUV.x+portion*(portion>0.8 ? -1.0 : 1.0)*25.0, 0.0, 1.0), pixelUV.y));
+            gl_FragColor = texture2D(u_canvas, vec2(portion>0.8 ? 0.0 : 1.0, pixelUV.y));
+            return;
+        }        
     }
+    
     
     float scale=1200.0/1440.0;
     vec4 color = texture2D(u_texture, vec2((pixelUV.x-0.5)*scale+0.5,pixelUV.y));
+
+    // gl_FragColor = color;
 
     vec4 canvas = texture2D(u_canvas, pixelUV);
     vec4 destcolor;

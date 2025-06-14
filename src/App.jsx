@@ -15,13 +15,17 @@ const REMOVE_BG=false;
 const DRAW_HAT=true;
 const SOUND_THRESHOLD=0.02;
 
+// const PLAY_TIME=2;
+// const OUTRO_TIME=100;
+// const INTRO_TIME=2;
+
 const PLAY_TIME=15;
-const OUTRO_TIME=5;
+const OUTRO_TIME=8;
 const INTRO_TIME=5;
 
-const TEXT_FADE_TIME=1.5;
-const INTRO_CHAR_TIME=3;
-const SCENE_FADE_TIME=2;
+const TEXT_FADE_TIME=2;
+const INTRO_CHAR_TIME=4;
+const SCENE_FADE_TIME=3;
 
 const IMAGE_COUNT_LEFT=4;
 const IMAGE_COUNT_RIGHT=4;
@@ -73,7 +77,7 @@ function App() {
 
   const refMask=useRef();
 
-  const { playSound } = useSound();
+  const { playSound, fadeOut, fadeIn } = useSound();
   
   const refLastHand=useRef();
 
@@ -535,11 +539,12 @@ function App() {
       case STATE.INTRO:
         setDetected(false);
 
+        fadeIn();
         fadeScene(1.0, SCENE_FADE_TIME, 1.0,()=>{
           toggleText(1);
-        
+          
           setTimeout(()=>{
-            refReady.current=true;  
+            refReady.current=true;              
           }, INTRO_TIME*1000);
 
         });
@@ -563,6 +568,8 @@ function App() {
 
           setTimeout(()=>{
             
+            fadeOut();
+
             fadeScene(0.0, SCENE_FADE_TIME, 0.0, ()=>{
               
               setState(()=>STATE.OUTRO);
@@ -573,12 +580,12 @@ function App() {
         });
         break;
       case STATE.OUTRO:
-        fadeScene(1.0, 0.2, 0.0,()=>{
+        fadeScene(1.0, 0.2, 2.0,()=>{
           
           
           gsap.to(refNextSceneProgress.current, {
             value: 1.0,
-            duration: 0.8,
+            duration: 1.0,
             delay: 1,
             ease: "slow(0.3,0.7,false)",
             onComplete:()=>{
@@ -594,7 +601,7 @@ function App() {
                 }); 
                 gsap.to(refNextSceneProgress.current, {
                   value: 0.0,
-                  duration: 0.8,
+                  duration: 1.0,
                   ease: "slow(0.3,0.7,false)",
                   onComplete:()=>{
                   
@@ -686,6 +693,8 @@ function App() {
       if(refPoseLandmarker.current){
         refPoseLandmarker.current?.close();
       }
+
+      
     }
 
   },[]);
