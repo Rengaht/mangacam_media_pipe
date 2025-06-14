@@ -15,9 +15,13 @@ const REMOVE_BG=false;
 const DRAW_HAT=true;
 const SOUND_THRESHOLD=0.02;
 
-const PLAY_TIME=10;
+const PLAY_TIME=15;
 const OUTRO_TIME=5;
 const INTRO_TIME=5;
+
+const TEXT_FADE_TIME=1.5;
+const INTRO_CHAR_TIME=3;
+const SCENE_FADE_TIME=2;
 
 const IMAGE_COUNT_LEFT=4;
 const IMAGE_COUNT_RIGHT=4;
@@ -48,6 +52,7 @@ function App() {
 
   const refVideo=useRef();
   const refCanvas=useRef();
+  const refOpacity=useRef({value: 1.0});
 
   const refSwords=useRef([]);
   const refHat=useRef();
@@ -64,6 +69,7 @@ function App() {
   const refLeftProgress=useRef({value: 0});
   const refNextSceneProgress=useRef({value: 0});
   const refReady=useRef(false);
+  const refTransition=useRef(false);
 
   const refMask=useRef();
 
@@ -178,6 +184,34 @@ function App() {
     
   
   }
+
+  function fadeScene(dest, duration, delay=0.0, onComplete) {
+    
+    console.log("fadeScene: ", dest, duration, delay);
+
+    if(dest==0){
+      // fade text
+      gsap.to("#_text", {
+        opacity: 0,
+        duration: TEXT_FADE_TIME,
+        ease: "power4.inOut",
+      });
+    }
+
+    refTransition.current=true;
+    
+    gsap.killTweensOf(refOpacity.current);
+    gsap.to(refOpacity.current, {
+      value: dest,
+      duration: duration || SCENE_FADE_TIME,
+      delay: delay + (dest==0? TEXT_FADE_TIME: 0),
+      ease: "power4.inOut",
+      onComplete:()=>{
+        refTransition.current=false;
+        if(onComplete) onComplete();
+      }
+    });
+  }
   async function renderLoop() {
 
     const video = refVideo.current;
@@ -191,30 +225,19 @@ function App() {
       
 
       
-      // try{
         if(video.readyState >= 2){
           const detections = await refPoseLandmarker.current?.detectForVideo(video, video.currentTime*1000);
           
-          // no people detected
-          // if(true || detections?.landmarks.length === 0){
-          //   drawCharacter();
-          //   // toggleText(true);
-          //   setDetected(false);
-
-          // }else{
-          //   processResults(detections);
-          //   // toggleText(false);
-          //   setDetected(true);
-          // }
-
           switch(refState.current){
             case STATE.INTRO:
-              if(refReady.current && detections.landmarks.length > 0){
-                setState(()=>STATE.PLAY);
-                setDetected(true);             
+              if(refReady.current && detections.landmarks.length > 0 && !refTransition.current){
+                fadeScene(0.0, SCENE_FADE_TIME/2, 0.0, ()=>{
+                  setState(()=>STATE.PLAY);
+                  setDetected(()=>true);                               
+                });
               }else{
                 drawCharacter();
-                setDetected(false);
+                // setDetected(false);
               }
               break;
             case STATE.PLAY:
@@ -225,6 +248,7 @@ function App() {
               drawNextScene();
               break;
           }
+          
 
 
           if(REMOVE_BG && refImageSegmenter.current){
@@ -274,7 +298,7 @@ function App() {
       };
       // console.log(delta);
       const dist=distance(delta, {x: 0, y: 0});
-      console.log("distance: ", dist);
+      // console.log("distance: ", dist);
       if(dist > SOUND_THRESHOLD){
         playSound();
       }
@@ -448,47 +472,17 @@ function App() {
                 );
   }
 
-  function toggleText(){
+  function toggleText(index, delay){
 
-    switch(state){
-      case STATE.INTRO:
-        gsap.to("#_end",{            
-            opacity: 0,
-            duration: 0.25,
-            ease: "power4.out",
-            onComplete:()=>{
-              gsap.to("#_cover",{
-                opacity: 1,
-                duration: 0.25,
-                delay: 0.25,
-                ease: "power4.out",                
-              });
-            }
-        })
-        break;
-      case STATE.PLAY:
-        gsap.to("#_cover",{
-            opacity: 0,
-            duration: 0.25,
-            ease: "power4.out",
-            onComplete:()=>{
-              gsap.to("#_end",{
-                opacity: 1,
-                duration: 0.5,
-                delay: 2.0,
-                ease: "power4.out",
-              });
-            }
-        });
-        break;
-      case STATE.OUTRO:
-        gsap.to("#_end",{
-            opacity: 0,
-            duration: 0.25,
-            ease: "power4.out",            
-        });
-        break;
-    }
+    const text=document.getElementById('_text');
+    text.src=`/image/text-${index}.png`;
+
+    gsap.to("#_text",{
+      opacity: 1,
+      duration: TEXT_FADE_TIME,
+      delay: delay || 0,
+      ease: "power4.out",
+    });
   }
   
 
@@ -535,47 +529,92 @@ function App() {
     console.log('state changed: ', state);
     refState.current=state;
 
+    
+
     switch(state){
       case STATE.INTRO:
-        toggleText(true);
-        
-        setTimeout(()=>{
-          refReady.current=true;  
-        }, INTRO_TIME*1000);
+        setDetected(false);
 
+        fadeScene(1.0, SCENE_FADE_TIME, 1.0,()=>{
+          toggleText(1);
+        
+          setTimeout(()=>{
+            refReady.current=true;  
+          }, INTRO_TIME*1000);
+
+        });
+        
         break;
       case STATE.PLAY:
-        toggleText(false);
-        setTimeout(()=>{
-          setState(()=>STATE.OUTRO);          
-        }, PLAY_TIME*1000);
+        fadeScene(1.0, SCENE_FADE_TIME, 0.0,()=>{
+          toggleText(2);
+
+          setTimeout(()=>{
+            gsap.to('#_text', {
+              opacity: 0,
+              duration: TEXT_FADE_TIME,
+              ease: "power4.inOut",
+              onComplete:()=>{
+                toggleText(3);
+              }
+            });
+            
+          }, TEXT_FADE_TIME*1000*2);
+
+          setTimeout(()=>{
+            
+            fadeScene(0.0, SCENE_FADE_TIME, 0.0, ()=>{
+              
+              setState(()=>STATE.OUTRO);
+
+            });
+                      
+          }, PLAY_TIME*1000);
+        });
         break;
       case STATE.OUTRO:
-        // setTimeout(()=>{
+        fadeScene(1.0, 0.2, 0.0,()=>{
           
-        //   setState(()=>STATE.INTRO);      
-        //   refReady.current=false;  
+          
+          gsap.to(refNextSceneProgress.current, {
+            value: 1.0,
+            duration: 0.8,
+            delay: 1,
+            ease: "slow(0.3,0.7,false)",
+            onComplete:()=>{
 
-        // }, OUTRO_TIME*1000);
-        
-        gsap.to(refNextSceneProgress.current, {
-          value: 1.0,
-          repeat:1,
-          yoyo:true,
-          duration: 0.8,
-          delay: 1,
-          repeatDelay: OUTRO_TIME,
-          ease: "slow(0.3,0.7,false)",
-          onComplete:()=>{
-            setState(()=>STATE.INTRO);      
-            refReady.current=false; 
-          }
+              toggleText(4, TEXT_FADE_TIME);
+
+
+              setTimeout(()=>{
+                gsap.to('#_text', {
+                  opacity: 0,
+                  duration: 0.5,
+                  ease: "power4.inOut",
+                }); 
+                gsap.to(refNextSceneProgress.current, {
+                  value: 0.0,
+                  duration: 0.8,
+                  ease: "slow(0.3,0.7,false)",
+                  onComplete:()=>{
+                  
+                    fadeScene(0.0, 0.2, 0, ()=>{
+                      setState(()=>STATE.INTRO);      
+                      refReady.current=false; 
+                    });
+                  }
+                });
+                 
+              }, OUTRO_TIME*1000);
+
+            }
+          })
         });
 
         break;
     }
 
-    toggleText();
+    // toggleText();
 
 
   },[state]);
@@ -613,15 +652,14 @@ function App() {
     }
 
     refNextScene.current=new Image();
-    refNextScene.current.src="/image/next-2.png";
+    refNextScene.current.src="/image/next.png";
 
 
-    const due=1500;
     gsap.fromTo(refLeftProgress.current, {
       value: 0
     },{ 
       value: 1, 
-      duration: due/1000,
+      duration: INTRO_CHAR_TIME,
       repeat: -1,
       // ease:"power4.inOut",
       onRepeat: ()=>{
@@ -632,8 +670,8 @@ function App() {
       value: 0
     },{ 
       value: 1, 
-      duration: due/1000,
-      delay: due/1000/2,
+      duration: INTRO_CHAR_TIME,
+      delay: INTRO_CHAR_TIME/2,
       repeat: -1,
       // repeatDelay: due/500,
       // ease:"power4.out",
@@ -660,10 +698,15 @@ function App() {
       <label className='absolute top-0 left-0 z-10 text-red-500'>{fps}</label>   
       {/* <div className='fixed top-0 left-0 w-full h-1/2'> */}
       <Scene width={RESOLUTION_WIDTH} height={RESOLUTION_HEIGHT}
-        video={refVideo.current} canvas={refCanvas.current} mask={refMask.current} state={refState.current}/>
+        video={refVideo.current} canvas={refCanvas.current} mask={refMask.current} 
+        state={refState.current}
+        opacity={refOpacity.current.value}/>
 
-      <img id="_end" src="/image/end.png" className='absolute top-0 left-0 w-full h-full z-10 opacity-0 object-cover object-left'/>
-      <img id="_cover" src="/image/cover.png" className='absolute top-0 left-0 w-full h-full z-10 object-cover object-left'/>
+      {/* <img id="_end" src="/image/text-3.png" className='hidden absolute top-0 left-0 w-full h-full z-10 opacity-0 object-cover object-left'/>
+      <img id="_cover" src="/image/text-1.png" className='absolute top-0 left-0 w-full h-full z-10 object-cover object-left'/> */}
+      
+      <img id="_text" src="/image/text-1.png" 
+          className='absolute top-0 left-0 w-full h-full z-10 object-cover object-center'/>
 
     </div>
   )

@@ -23,6 +23,7 @@ uniform vec2 u_resolution;
 uniform float pixelSize;
 uniform float u_time;
 uniform float blendColor;
+uniform float u_opacity;
 
 
 vec4 palette[10] = vec4[](
@@ -107,9 +108,22 @@ void main() {
   
     vec2 uv = vUv;
     vec2 pixelUV = floor(uv * u_resolution / (pixelSize)) * (pixelSize) / u_resolution;
-    vec2 offset=vec2(0.0, smoothstep(0.95, 1.0,noise(pixelUV.x*2.2 + pixelUV.y * 120.2 + sin(u_time*20.5)*200.0)))*20.0*pixelSize/u_resolution;
+
+    float portion=noise(vec2(pixelUV.x*0.2 + u_time*0.2 ,pixelUV.y * 38.2 + sin(u_time*0.1)*12.0));
+    float noise1=noise(pixelUV.x*2.2 + pixelUV.y * 120.2 + sin(u_time*20.5)*200.0);
+    vec2 offset=vec2(0.0, smoothstep(0.95, 1.0,noise1))*20.0*pixelSize/u_resolution;
 
     pixelUV += offset;
+
+    float threshold=0.15;
+    if(blendColor==0.0){
+        if(portion>threshold){
+            pixelUV=uv;
+        }else{
+            float deltax=smoothstep(0.2, 0.8, pixelUV.y+pixelUV.x*0.1+(portion*0.2));            
+            pixelUV=vec2(deltax,pixelUV.y);            
+        }
+    }
     
     float scale=1200.0/1440.0;
     vec4 color = texture2D(u_texture, vec2((pixelUV.x-0.5)*scale+0.5,pixelUV.y));
@@ -124,7 +138,7 @@ void main() {
     
     
     
-    gl_FragColor = refineColor(destcolor);
+    gl_FragColor = refineColor(destcolor)*u_opacity;
     // gl_FragColor=canvas;
     
     // gl_FragColor= vec4(mask.r, 1.0,0.0,1.0);

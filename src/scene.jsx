@@ -12,7 +12,7 @@ const TintColors=[
     [235, 244, 0]
 ];
 
-const Cube = ({ video, canvas, mask, state: sceneState, width, height }) => {
+const Cube = ({ video, canvas, mask, state: sceneState, width, height, opacity }) => {
     const mesh = useRef();
 
     // const texture = useMemo(() => new THREE.CanvasTexture(canvas), [canvas]);
@@ -24,6 +24,7 @@ const Cube = ({ video, canvas, mask, state: sceneState, width, height }) => {
         u_texture: { value: null },
         u_mask: { value: null },
         blendColor: { value: 1 },
+        u_opacity: { value: 1 },
     }), []);
 
   
@@ -47,6 +48,8 @@ const Cube = ({ video, canvas, mask, state: sceneState, width, height }) => {
 
         if(sceneState=='outro') mesh.current.material.uniforms.blendColor.value = 0.0;
         else mesh.current.material.uniforms.blendColor.value = 1.0;
+
+        if(opacity!=null) mesh.current.material.uniforms.u_opacity.value = opacity;
 
         // if(mask!=null && mesh.current.material.uniforms.u_mask.value==null){
         //     const texture= new THREE.CanvasTexture(mask);
