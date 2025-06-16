@@ -19,7 +19,7 @@ const SOUND_THRESHOLD=0.02;
 // const OUTRO_TIME=100;
 // const INTRO_TIME=2;
 
-const PLAY_TIME=15;
+const PLAY_TIME=18;
 const OUTRO_TIME=8;
 const INTRO_TIME=5;
 
@@ -77,7 +77,7 @@ function App() {
 
   const refMask=useRef();
 
-  const { playSound, fadeOut, fadeIn } = useSound();
+  const { playSound, fadeOut, fadeIn, playGameBgm, playStartBgm } = useSound();
   
   const refLastHand=useRef();
 
@@ -239,6 +239,7 @@ function App() {
                   setState(()=>STATE.PLAY);
                   setDetected(()=>true);                               
                 });
+                fadeOut();
               }else{
                 drawCharacter();
                 // setDetected(false);
@@ -539,6 +540,7 @@ function App() {
       case STATE.INTRO:
         setDetected(false);
 
+        playStartBgm();
         fadeIn();
         fadeScene(1.0, SCENE_FADE_TIME, 1.0,()=>{
           toggleText(1);
@@ -553,8 +555,10 @@ function App() {
       case STATE.PLAY:
         fadeScene(1.0, SCENE_FADE_TIME, 0.0,()=>{
           toggleText(2);
+          playGameBgm();
 
           setTimeout(()=>{
+
             gsap.to('#_text', {
               opacity: 0,
               duration: TEXT_FADE_TIME,
@@ -568,7 +572,7 @@ function App() {
 
           setTimeout(()=>{
             
-            fadeOut();
+            
 
             fadeScene(0.0, SCENE_FADE_TIME, 0.0, ()=>{
               
