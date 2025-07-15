@@ -10,6 +10,7 @@ gsap.registerPlugin(SlowMo);
 
 
 import '../App.css'
+import { Intro } from './intro';
 
 const REMOVE_BG=true;
 const DRAW_HAT=true;
@@ -262,18 +263,15 @@ function AppV2() {
           const detections = await refPoseLandmarker.current?.detectForVideo(video, video.currentTime*1000);
           
           switch(refState.current){
-            case STATE.INTRO:
-              // if(refReady.current && detections.landmarks.length > 0 && !refTransition.current){
-              //   fadeScene(0.0, SCENE_FADE_TIME/2, 0.0, ()=>{
-              //     setState(()=>STATE.PLAY);
-              //     setDetected(()=>true);                               
-              //   });
-              //   fadeOut();
-              // }else{
-              //   drawCharacter();
-              //   // setDetected(false);
-              // }
-              drawCharacter();
+            case STATE.INTRO:        
+              // drawCharacter();
+              if(refReady.current && detections.landmarks.length > 0 && !refTransition.current){
+                fadeScene(0.0, SCENE_FADE_TIME/2, 0.0, ()=>{
+                  setState(()=>STATE.PLAY);
+                  setDetected(()=>true);                               
+                });
+                fadeOut();
+              }
               break;
             case STATE.PLAY:
               processResults(detections);
@@ -749,12 +747,12 @@ function AppV2() {
   },[]);
 
   return (
-    <div className={`h-full aspect-[250/225] relative`}>
+    <div className={`h-full aspect-[250/225] relative overflow-hidden`}>
       <video ref={refVideo} id="_capture" className='hidden'></video>
       <canvas id="_canvas" ref={refCanvas} className='hidden' width={RESOLUTION_WIDTH} height={RESOLUTION_HEIGHT}></canvas>
       <canvas id="_mask" ref={refMask} className='hidden' width={RESOLUTION_WIDTH} height={RESOLUTION_HEIGHT}></canvas>
 
-      <img id="bg" src={`/bg/${indexBg+1}.png`} className='absolute top-0 left-0 w-full h-full content-cover' width={RESOLUTION_WIDTH} height={RESOLUTION_HEIGHT}/>
+      <img id="bg" src={`/bg/0${indexBg+1}.jpg`} className='absolute top-0 left-0 w-full h-full content-cover' width={RESOLUTION_WIDTH} height={RESOLUTION_HEIGHT}/>
       <label className='absolute top-0 left-0 z-10 text-red-500'>{fps}</label>   
       {/* <div className='fixed top-0 left-0 w-full h-1/2'> */}
       <Scene width={RESOLUTION_WIDTH} height={RESOLUTION_HEIGHT}
@@ -765,6 +763,8 @@ function AppV2() {
       {/* <img id="_end" src="/image/text-3.png" className='hidden absolute top-0 left-0 w-full h-full z-10 opacity-0 object-cover object-left'/>
       <img id="_cover" src="/image/text-1.png" className='absolute top-0 left-0 w-full h-full z-10 object-cover object-left'/> */}
       
+      {state==STATE.INTRO && <Intro/>}
+
       <img id="_text" src="/image/text-1.png" 
           className='absolute top-0 left-0 w-full h-full z-10 object-cover object-center'/>
         {/* <button className='absolute top-5 left-5 z-20 text-white bg-red-500' onClick={()=>setIndexBg((indexBg+1)%BG_COUNT)}>update bg</button> */}
