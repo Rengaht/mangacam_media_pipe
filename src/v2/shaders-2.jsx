@@ -150,12 +150,26 @@ vec4 smoothedMask(vec2 xy) {
     // float feathered = sum / total;
     // return vec4(feathered, feathered, feathered, 1.0);
 }
+vec2 getScaledUV(vec2 xy){
 
+    // float video_ratio = 640.0 / 360.0; // 1.77
+    // float canvas_ratio = 1200.0 / 1080.0; // 1.11
+    
+    // float video_ratio = 360.0 / 640.0; // 0.5625
+    // float canvas_ratio = 1080.0 / 1200.0; // 0.9
+
+    // vec2 scaled_xy = vec2((xy.x - 0.5)/canvas_ratio *video_ratio + 0.5, xy.y);
+    return xy;
+}
 vec4 getLayerColor(vec2 xy){
 
     // vec4 color = texture2D(u_texture, xy);
-    vec4 color = vec4(median(xy, 1.2 / u_resolution.xy), 1.0);
-    vec4 mask= smoothedMask(xy);
+
+    vec2 scaled_xy= getScaledUV(xy);
+
+
+    vec4 color = vec4(median(scaled_xy, 1.2 / u_resolution.xy), 1.0);
+    vec4 mask= smoothedMask(scaled_xy);
     
     color=vec4(0.)*(1.0-mask.a) + color*(mask.a);
     
@@ -240,7 +254,7 @@ vec3 blendDarken(vec3 base, vec3 blend, float opacity) {
 float getValue(int x, int y) {
     
     vec3 luma = vec3(0.299, 0.587, 0.114);
-    vec4 color=getLayerColor(vUv + vec2(x, y) * vec2(1.0 / u_resolution.x, 1.0 / u_resolution.y));
+    vec4 color=getLayerColor(getScaledUV(vUv) + vec2(x, y) * vec2(1.0 / u_resolution.x, 1.0 / u_resolution.y));
 
     return dot(color.xyz, luma);
 }
@@ -285,17 +299,11 @@ float combinedSobelValue() {
 
 void main() {
 
-    vec2 uv=vUv;
-    if(blendColor==0.0){
-        gl_FragColor =texture2D(u_canvas, uv);
-        return;
-    }
-//   gl_FragColor=getLayerColor(uv);
-    // gl_FragColor=vec4(vec3(1.0-smoothedMask(uv).r), 1.0);
-    // gl_FragColor=texture2D(u_mask, uv);
-    // return ;
+    vec2 uv=getScaledUV(vUv);
 
-    vec4 paper=getLayerColor(vUv);
+
+    
+    vec4 paper=getLayerColor(uv);
 
   float l = luma(paper.rgb);
   l = range.x + l * (range.y - range.x);

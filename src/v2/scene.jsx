@@ -51,7 +51,7 @@ const Cube = ({ video, canvas, mask, bg, state: sceneState, width, height, opaci
         if(sceneState=='outro') mesh.current.material.uniforms.blendColor.value = 0.0;
         else mesh.current.material.uniforms.blendColor.value = 1.0;
 
-        if(opacity!=null) mesh.current.material.uniforms.u_opacity.value = opacity;
+        // if(opacity!=null) mesh.current.material.uniforms.u_opacity.value = opacity;
 
         if(mask!=null && mesh.current.material.uniforms.u_mask.value==null){
             const texture= new THREE.CanvasTexture(mask);
@@ -122,7 +122,7 @@ const Cube = ({ video, canvas, mask, bg, state: sceneState, width, height, opaci
 };
 
 const Scene = (props) => (
-    <Canvas orthographic camera={{zoom: 1, position: [0, 0, 100]}}>
+    <Canvas id="_canvas_three" orthographic camera={{zoom: 1, position: [0, 0, 100]}}>
         <Cube {...props} />        
     </Canvas>
 );

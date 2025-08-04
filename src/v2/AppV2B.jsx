@@ -16,17 +16,17 @@ const REMOVE_BG=true;
 const DRAW_HAT=false;
 const SOUND_THRESHOLD=0.02;
 
-// const PLAY_TIME=200;
-// const OUTRO_TIME=1;
-// const INTRO_TIME=2;
+const PLAY_TIME=200;
+const OUTRO_TIME=1;
+const INTRO_TIME=1;
 
-const PLAY_TIME=18;
-const OUTRO_TIME=8;
-const INTRO_TIME=5;
+// const PLAY_TIME=18;
+// const OUTRO_TIME=8;
+// const INTRO_TIME=5;
 
 const TEXT_FADE_TIME=2;
 const INTRO_CHAR_TIME=4;
-const SCENE_FADE_TIME=3;
+const SCENE_FADE_TIME=1;
 
 const IMAGE_COUNT_LEFT=4;
 const IMAGE_COUNT_RIGHT=4;
@@ -44,7 +44,7 @@ const STATE={
   OUTRO: "outro",
 }
 
-function AppV2() {
+function AppV2B() {
   
   const [init, setInit] = useState(false);
   const [detected, setDetected] = useState(false);
@@ -80,14 +80,15 @@ function AppV2() {
 
   const refMask=useRef();
 
-
   const { playSound, fadeOut, fadeIn, playGameBgm, playStartBgm } = useSound();
   
   const refLastHand=useRef();
   
   const refBg=useRef([]);
   // const [indexBg, setIndexBg] = useState(0);
-  const refIndexBg=useRef(0);
+  const refIndexBg = useRef(0);
+
+  const refTimer=useRef();
 
 
 
@@ -236,7 +237,7 @@ function AppV2() {
 
     refTransition.current=true;
     
-    // gsap.killTweensOf(refOpacity.current);
+    gsap.killTweensOf(refOpacity.current);
     // gsap.to(refOpacity.current, {
     //   value: dest,
     //   duration: duration || SCENE_FADE_TIME,
@@ -249,10 +250,12 @@ function AppV2() {
     // });
 
     gsap.killTweensOf('#_canvas_three');
-    gsap.killTweensOf('#_bg');
-    gsap.killTweensOf('#_front')
-    gsap.to(['#_bg', '#_canvas_three','#_front'], {
-      opacity: dest,
+    // gsap.killTweensOf('#_bg');
+    // gsap.killTweensOf('#_front')
+    // gsap.to(['#_canvas_three'], {
+    //   opacity: dest,
+    gsap.to(refOpacity.current, {
+      value: dest,
       duration: duration || SCENE_FADE_TIME,
       delay: delay + (dest==0? TEXT_FADE_TIME: 0),
       ease: "power4.inOut",
@@ -265,6 +268,7 @@ function AppV2() {
         if(onComplete) onComplete();
       }
     });
+
   }
   async function renderLoop() {
 
@@ -286,6 +290,9 @@ function AppV2() {
             case STATE.INTRO:        
               // drawCharacter();
               if(refReady.current && detections.landmarks.length > 0 && !refTransition.current){
+                
+                console.log('Landmarks detected, switching to play state');
+
                 fadeScene(0.0, SCENE_FADE_TIME/2, 0.0, ()=>{
                   setState(()=>STATE.PLAY);
                   setDetected(()=>true);                               
@@ -295,6 +302,21 @@ function AppV2() {
               break;
             case STATE.PLAY:
               processResults(detections);
+              if(detections.landmarks.length <1 && !refTransition.current){
+
+                console.log("No landmarks detected, switching to intro");
+                if(refTimer.current){
+                  clearTimeout(refTimer.current);
+                }
+
+                refReady.current=false;
+                fadeScene(0.0, SCENE_FADE_TIME, 0.0, ()=>{
+                  
+                  setState(()=>STATE.INTRO);
+                  
+                });
+                fadeOut();
+              }
               break;
             // default:
             case STATE.OUTRO:
@@ -594,22 +616,22 @@ function AppV2() {
 
         playStartBgm();
         fadeIn();
-        fadeScene(1.0, SCENE_FADE_TIME, 1.0,()=>{
-          toggleText(1);
+        // fadeScene(0.0, 0.1, 0,()=>{
+          toggleText(2);
           
           setTimeout(()=>{
             refReady.current=true;              
           }, INTRO_TIME*1000);
 
-        });
+        // });
         
         break;
       case STATE.PLAY:
         fadeScene(1.0, SCENE_FADE_TIME, 0.0,()=>{
-          toggleText(2);
+          // toggleText(2);
           playGameBgm();
 
-          setTimeout(()=>{
+          refTimer.current=setTimeout(()=>{
 
             gsap.to('#_text', {
               opacity: 0,
@@ -622,48 +644,9 @@ function AppV2() {
             
           }, TEXT_FADE_TIME*1000*2);
 
-          setTimeout(()=>{
-            
-            
-
-            fadeScene(0.0, SCENE_FADE_TIME, 0.0, ()=>{
-              
-              setState(()=>STATE.OUTRO);
-
-            });
-                      
-          }, PLAY_TIME*1000);
         });
         break;
-      case STATE.OUTRO:
-        
-        gsap.set('#_outro>.outro_mask', {height:'50%'});
-
-        fadeScene(1.0, 0.2, 2.0,()=>{
-          
-          toggleOutro(true,()=> {           
-
-              toggleText(4, TEXT_FADE_TIME);
-
-
-              setTimeout(()=>{
-                gsap.to('#_text', {
-                  opacity: 0,
-                  duration: 0.5,
-                  ease: "power4.inOut",
-                }); 
-                toggleOutro(false, ()=>{
-                  
-                    fadeScene(0.0, 0.2, 0, ()=>{
-                      setState(()=>STATE.INTRO);      
-                      refReady.current=false; 
-                    });
-                  
-                });
-              }, OUTRO_TIME*1000);
-          });
-        });
-        break;
+      
     }
 
     // toggleText();
@@ -768,6 +751,8 @@ function AppV2() {
       }
     });
     
+    // gsap.set('#_canvas_three',{opacity:0});
+
 
     return ()=>{
       clearInterval(p);
@@ -786,7 +771,7 @@ function AppV2() {
       <canvas id="_canvas" ref={refCanvas} className='hidden' width={RESOLUTION_WIDTH} height={RESOLUTION_HEIGHT}></canvas>
       <canvas id="_mask" ref={refMask} className='hidden' width={RESOLUTION_WIDTH} height={RESOLUTION_HEIGHT}></canvas>
 
-      <img id="_bg" src={`/bg/back.png`} className='absolute top-0 left-0 w-full h-full content-cover opacity-0' width={RESOLUTION_WIDTH} height={RESOLUTION_HEIGHT}/>
+      <img id="_bg" src={`/bg/back.png`} className='absolute top-0 left-0 w-full h-full content-cover opacity-100' width={RESOLUTION_WIDTH} height={RESOLUTION_HEIGHT}/>
       <label className='absolute top-0 left-0 z-10 text-red-500'>{fps}</label>   
       {/* <div className='fixed top-0 left-0 w-full h-1/2'> */}
       <Scene width={RESOLUTION_WIDTH} height={RESOLUTION_HEIGHT}
@@ -798,16 +783,12 @@ function AppV2() {
       <img id="_cover" src="/image/text-1.png" className='absolute top-0 left-0 w-full h-full z-10 object-cover object-left'/> */}
       
 
-      {state==STATE.INTRO && <Intro/>}
-      {state==STATE.PLAY && <img id="_front" src={`/bg/front.png`} className='absolute top-0 left-0 w-full h-full content-cover opacity-0' width={RESOLUTION_WIDTH} height={RESOLUTION_HEIGHT}/>}
-        
-      {state==STATE.OUTRO && <div id="_outro" className='absolute top-0 left-0 w-full h-full z-5 object-cover object-center'>
-        <img src="/image/next.png" className='absolute top-0 left-0 w-full h-full'/>
-        <div className='outro_mask absolute top-0 left-0 w-full h-1/2 bg-black'/>
-        <div className='outro_mask absolute bottom-0 left-0 w-full h-1/2 bg-black'/>
-      </div>}
       
-      <img id="_text" src="/image/text-1.png" 
+      <img id="_front" src={`/bg/front.png`} className='absolute top-0 left-0 w-full h-full content-cover opacity-100' width={RESOLUTION_WIDTH} height={RESOLUTION_HEIGHT}/>
+        
+      
+      
+      <img id="_text" src="/image/text-2.png" 
           className='absolute top-0 left-0 w-full h-full z-10 object-cover object-center'/>
       
       {/* debug area */}
@@ -821,4 +802,4 @@ function AppV2() {
   )
 }
 
-export default AppV2
+export default AppV2B
