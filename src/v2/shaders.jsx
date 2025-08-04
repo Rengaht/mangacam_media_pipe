@@ -122,6 +122,7 @@ void main() {
   
     vec2 uv = vUv;
     
+    
     // vec4 color = texture2D(u_texture, uv);
     vec3 color_toon = median(uv, 1.6 / u_resolution.xy);
     color_toon = hsv2rgb(color_toon); 

@@ -13,15 +13,14 @@ import '../App.css'
 import { Intro } from './intro';
 
 const REMOVE_BG=true;
-const DRAW_HAT=true;
+const DRAW_HAT=false;
 const SOUND_THRESHOLD=0.02;
 
-// const PLAY_TIME=2;
-// const OUTRO_TIME=100;
+// const PLAY_TIME=200;
+// const OUTRO_TIME=1;
 // const INTRO_TIME=2;
 
 const PLAY_TIME=18;
-// const PLAY_TIME=5;
 const OUTRO_TIME=8;
 const INTRO_TIME=5;
 
@@ -149,6 +148,7 @@ function AppV2() {
     
     const video = refVideo.current;
     const context=refMask.current.getContext("2d");
+    context.clearRect(0, 0, refMask.current.width, refMask.current.height);
     
     const { videoWidth, videoHeight } = video;
     const { width, height } = refMask.current;
@@ -185,10 +185,10 @@ function AppV2() {
         const maskIndex = maskY * maskWidth + maskX;
         const maskVal = Math.round(mask[maskIndex] * 255.0);
 
-        imageData[(y * width + x) * 4] = 0.0; // R
-        imageData[(y * width + x) * 4 + 1] = 255 - maskVal; // G
-        imageData[(y * width + x) * 4 + 2] = 0.0; // B
-        imageData[(y * width + x) * 4 + 3] = 255 - maskVal; // A
+        imageData[(y * width + x) * 4] = maskVal; // R
+        imageData[(y * width + x) * 4 + 1] = maskVal; // G
+        imageData[(y * width + x) * 4 + 2] = maskVal; // B
+        imageData[(y * width + x) * 4 + 3] = maskVal; // A
 
       }
     }
@@ -724,6 +724,7 @@ function AppV2() {
       value: 0
     },{ 
       value: 1, 
+      transformOrigin:'bottom',
       duration: INTRO_CHAR_TIME,
       delay: INTRO_CHAR_TIME/2,
       repeat: -1,
@@ -752,7 +753,7 @@ function AppV2() {
       <canvas id="_canvas" ref={refCanvas} className='hidden' width={RESOLUTION_WIDTH} height={RESOLUTION_HEIGHT}></canvas>
       <canvas id="_mask" ref={refMask} className='hidden' width={RESOLUTION_WIDTH} height={RESOLUTION_HEIGHT}></canvas>
 
-      <img id="bg" src={`/bg/0${indexBg+1}.jpg`} className='absolute top-0 left-0 w-full h-full content-cover' width={RESOLUTION_WIDTH} height={RESOLUTION_HEIGHT}/>
+      <img id="bg" src={`/bg/back.png`} className='absolute top-0 left-0 w-full h-full content-cover' width={RESOLUTION_WIDTH} height={RESOLUTION_HEIGHT}/>
       <label className='absolute top-0 left-0 z-10 text-red-500'>{fps}</label>   
       {/* <div className='fixed top-0 left-0 w-full h-1/2'> */}
       <Scene width={RESOLUTION_WIDTH} height={RESOLUTION_HEIGHT}
@@ -764,7 +765,7 @@ function AppV2() {
       <img id="_cover" src="/image/text-1.png" className='absolute top-0 left-0 w-full h-full z-10 object-cover object-left'/> */}
       
       {state==STATE.INTRO && <Intro/>}
-
+      {state==STATE.PLAY && <img id="bg" src={`/bg/front.png`} className='absolute top-0 left-0 w-full h-full content-cover' width={RESOLUTION_WIDTH} height={RESOLUTION_HEIGHT}/>}
       <img id="_text" src="/image/text-1.png" 
           className='absolute top-0 left-0 w-full h-full z-10 object-cover object-center'/>
         {/* <button className='absolute top-5 left-5 z-20 text-white bg-red-500' onClick={()=>setIndexBg((indexBg+1)%BG_COUNT)}>update bg</button> */}

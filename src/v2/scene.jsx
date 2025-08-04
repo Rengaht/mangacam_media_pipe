@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
-import { vertexShader, fragmentShader } from './shaders';
+import { vertexShader, fragmentShader } from './shaders-2';
 
 
 
@@ -26,6 +26,7 @@ const Cube = ({ video, canvas, mask, bg, state: sceneState, width, height, opaci
         blendColor: { value: sceneState=='outro'? 0:1 },
         u_opacity: { value: 1 },
         u_bg: {value:null},
+        u_featherSize:{ value: 10.0 }
     }), []);
 
   
