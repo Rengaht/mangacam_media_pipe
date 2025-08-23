@@ -44,7 +44,7 @@ const STATE={
   OUTRO: "outro",
 }
 
-function AppV2B() {
+function AppV2B({removeBg}) {
   
   const [init, setInit] = useState(false);
   const [detected, setDetected] = useState(false);
@@ -771,20 +771,21 @@ function AppV2B() {
       <canvas id="_canvas" ref={refCanvas} className='hidden' width={RESOLUTION_WIDTH} height={RESOLUTION_HEIGHT}></canvas>
       <canvas id="_mask" ref={refMask} className='hidden' width={RESOLUTION_WIDTH} height={RESOLUTION_HEIGHT}></canvas>
 
-      <img id="_bg" src={`/bg/back.png`} className='absolute top-0 left-0 w-full h-full content-cover opacity-100' width={RESOLUTION_WIDTH} height={RESOLUTION_HEIGHT}/>
+      {!removeBg && <img id="_bg" src={`/bg/back.png`} className='absolute top-0 left-0 w-full h-full content-cover opacity-100' width={RESOLUTION_WIDTH} height={RESOLUTION_HEIGHT}/>}
       <label className='absolute top-0 left-0 z-10 text-red-500'>{fps}</label>   
       {/* <div className='fixed top-0 left-0 w-full h-1/2'> */}
       <Scene width={RESOLUTION_WIDTH} height={RESOLUTION_HEIGHT}
         video={refVideo.current} canvas={refCanvas.current} mask={refMask.current} bg={refBg.current[0]}
         state={refState.current}
-        opacity={refOpacity.current.value}/>
+        opacity={refOpacity.current.value}
+        removeBg={removeBg}/>
 
       {/* <img id="_end" src="/image/text-3.png" className='hidden absolute top-0 left-0 w-full h-full z-10 opacity-0 object-cover object-left'/>
       <img id="_cover" src="/image/text-1.png" className='absolute top-0 left-0 w-full h-full z-10 object-cover object-left'/> */}
       
 
       
-      <img id="_front" src={`/bg/front.png`} className='absolute top-0 left-0 w-full h-full content-cover opacity-100' width={RESOLUTION_WIDTH} height={RESOLUTION_HEIGHT}/>
+      {!removeBg && <img id="_front" src={`/bg/front.png`} className='absolute top-0 left-0 w-full h-full content-cover opacity-100' width={RESOLUTION_WIDTH} height={RESOLUTION_HEIGHT}/>}
         
       
       

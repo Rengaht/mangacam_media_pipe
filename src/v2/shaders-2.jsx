@@ -163,10 +163,10 @@ vec2 getScaledUV(vec2 xy){
 }
 vec4 getLayerColor(vec2 xy){
 
-    // vec4 color = texture2D(u_texture, xy);
-
+    
     vec2 scaled_xy= getScaledUV(xy);
 
+    // vec4 color = texture2D(u_texture, xy);
 
     vec4 color = vec4(median(scaled_xy, 1.2 / u_resolution.xy), 1.0);
     vec4 mask= smoothedMask(scaled_xy);
@@ -188,17 +188,31 @@ vec4 getLayerColor(vec2 xy){
 
 
 
-float scale=2.35;
-vec3 inkColor=vec3(0.3);
-float thickness=0.95;
-vec2 range=vec2(0.17,1.0);
-float angleStep=4.;
-float angle=0.;
-float rim=0.9;
-float noiseScale=0.3;
-float noiseAmplitude=0.2;
-float linesNoiseScale=12.;
-float linesNoiseAmplitude=0.5;
+// float scale=2.35;
+// vec3 inkColor=vec3(0.3);
+// float thickness=0.95;
+// vec2 range=vec2(0.17,1.0);
+// float angleStep=4.;
+// float angle=0.;
+// float rim=0.9;
+// float noiseScale=0.3;
+// float noiseAmplitude=0.2;
+// float linesNoiseScale=12.;
+// float linesNoiseAmplitude=0.5;
+uniform float scale;
+uniform vec3 inkColor;
+uniform float thickness;
+uniform vec2 range;
+uniform float angleStep;
+uniform float angle;
+uniform float rim;
+uniform float noiseScale;
+uniform float noiseAmplitude;
+uniform float linesNoiseScale;
+uniform float linesNoiseAmplitude;
+uniform float drawBg;
+
+
 
 #define TAU 6.28318530718
 #define PI 3.141592653589793
@@ -306,7 +320,11 @@ void main() {
     vec4 paper=getLayerColor(uv);
 
   float l = luma(paper.rgb);
-  l = range.x + l * (range.y - range.x);
+//   l = range.x + l * (range.y - range.x);
+    l = clamp((l - range.x) / (range.y - range.x), 0.0, 1.0);
+
+  float level=1.0/5.0;
+  float variant=floor((1.0-l)/level); // 1~5
 
   float a = angle;
   float r = smoothstep(0.2, 0.8, l); // no camera-based rim lighting since there's no normal
@@ -314,41 +332,68 @@ void main() {
   float de = 0.001 * length(vec2(dFdx(gl_FragCoord.x), dFdy(gl_FragCoord.y)));
   float e = 0.1 * de;
 
-  vec2 coords = scale * 100.0 * (uv.xy / (de * 500.0));
-  coords += linesNoiseAmplitude * noise(linesNoiseScale * uv.xy-u_time*0.15);
+  vec2 coords = (scale) * 100.0 * (uv.xy / (de * 500.0));
+//   coords += linesNoiseAmplitude * noise(linesNoiseScale * uv.xy-u_time*0.15);
 
-  float border = 1.0-combinedSobelValue();
-  l *= border;
+//   float border = 1.0-combinedSobelValue();
+//   l *= border;
 
   a *= 1.-r;
-  a += PI / 2.0;
+  a += PI / 2.0;// PI * smoothstep(0.0, 0.5, mod(uv.x*4.0, 4.0));
 
   mat2 rot = mat2(cos(a), -sin(a), sin(a), cos(a));
   coords = rot * coords;
 
-    float line = lines(l, coords, vec2(5.0), thickness + noiseAmplitude * noise(noiseScale * coords.xy+u_time*0.05), e);
+  
+    // float line = lines(l, coords, vec2(5.0), thickness + noiseAmplitude *  noise(noiseScale * coords.xy+u_time*0.05), e);
+
+    float line2=noise(linesNoiseScale * coords.xy*vec2(1.0/linesNoiseAmplitude, 1.0) + u_time * 0.8);
+    if(line2<=thickness) line2-=thickness;
+
+    float line=noise(noiseScale* coords.xy*vec2(1.0, 1.0/noiseAmplitude) + u_time*0.25);
+    if(line<=thickness) line-=thickness;
+
+
+    line=min(line, line2);
+    
+
+    line+=smoothstep(0.0, .6, pow(l,2.0));
+    
+    
+   
+
      if (line < 0.1) {
         gl_FragColor = vec4(inkColor * line, 1.0);
+        
     } else {
-        // gl_FragColor = vec4(vec3(smoothstep(0.1, 0.35, l)),1.0);
+        
+        // gl_FragColor = vec4(vec3(smoothstep(0., 0.2, line)),1.0);
+        // gl_FragColor=vec4(vec3(1.0-variant*level), 1.0);
         gl_FragColor=vec4(1.0);
     }
 
-    
+    // gl_FragColor=vec4(vec3(variant), 1.0);
     
     float mask = smoothedMask(uv).a;
     vec4 canvas = texture2D(u_canvas, uv);
     if(canvas.a>0.){
         gl_FragColor.a=u_opacity;
     }else{                
+
         gl_FragColor.a=(mask) * u_opacity;
         
     }
 
+    
+
     if (gl_FragColor.r != gl_FragColor.g || gl_FragColor.r != gl_FragColor.b) {
         gl_FragColor = vec4(vec3(0.0), gl_FragColor.a);
     }
-  
+    
+
+    if(mask<=0.2 && drawBg>0.0){
+        gl_FragColor=vec4(vec3(1.0)-inkColor*line, drawBg);       
+    }
 }
 
 `

@@ -16,6 +16,7 @@ createRoot(document.getElementById('root')).render(
       <Route path="/test" element={<Test />} />
       <Route path="/" element={<AppV2 />} />
       <Route path="/B" element={<AppV2B />} />
+      <Route path="/B2" element={<AppV2B removeBg={true}/>} />
     </Routes>
   </BrowserRouter>
   
